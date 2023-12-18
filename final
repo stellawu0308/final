@@ -1,0 +1,56 @@
+from hello import get_soup
+#讓使用者輸入欲查詢的歌詞
+entry=input('請輸入欲查詢的歌詞')
+#讓webdriver控制網站
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+import time
+path = '/Users/wuyanyi/Desktop/chromedriver-mac-arm64/chromedriver'
+service=Service(executable_path=path)
+chrome=webdriver.Chrome(service=service)
+chrome.get('https://mojim.com/twznew.htm')
+#按搜尋歌詞的選項按鈕
+ly_button_xpath=('/html/body/div[2]/table/tbody/tr/td/table/tbody/tr[6]/td/table/tbody/tr/td/form/p[1]/label[4]/nobr/input')
+ly_button= chrome.find_element(By.XPATH,ly_button_xpath)
+ly_button.click()
+#尋找搜尋框
+element_xpath=('/html/body/div[2]/table/tbody/tr/td/table/tbody/tr[6]/td/table/tbody/tr/td/form/p[2]/input[1]')
+element = chrome.find_element(By.XPATH, element_xpath)
+element.send_keys(entry)
+#按下搜尋鈕
+button_xpath=('/html/body/div[2]/table/tbody/tr/td/table/tbody/tr[6]/td/table/tbody/tr/td/form/p[2]/input[2]')
+button= chrome.find_element(By.XPATH,button_xpath)
+button.click()
+#跳轉到使用者輸入的歌詞的網址
+url=(f'https://mojim.com/{entry}.html?t4')
+#取得網站
+soup=get_soup(url)
+p1= chrome.page_source
+from bs4 import BeautifulSoup
+p1_soup = BeautifulSoup(p1, 'lxml')
+#歌名
+name=soup.find_all('span', class_='mxsh_ss2')
+song_names = [tag.get_text() for tag in name]
+#tag.get_text(): 在列表推導式中，這部分是一個遍歷 name 列表中每個標籤 tag 的方法。get_text() 是BeautifulSoup中的一個方法，用於獲取標籤內的純文字內容。
+#for tag in song_name_tags: 這部分是列表推導式的迭代器部分。它遍歷了 song_name_tags 列表中的每個標籤，並將每個標籤的文字內容提取出來。
+#因此，整個列表推導式的作用是將 song_name_tags 列表中每個標籤的文字內容提取出來，並存儲在 song_names 列表中。
+# 移除歌名前面的數字
+song_list = song_names[1:]
+song_list_clean= [song.split('.', 1)[-1] for song in song_list if song[0].isdigit()]
+#爬歌詞
+lyric=soup.find_all('span', class_='mxsh_ss3')
+song_lyric = [tag.get_text() for tag in lyric[1:]]
+#變成表格
+import pandas as pd
+df = pd.DataFrame(columns=['歌名', '歌詞'])
+for i in range(len(song_list_clean)):
+    df.loc[i] = [song_list_clean[i], song_lyric[i]]
+    print(df)
+#存成csv檔
+df.to_csv(f'{entry}的搜尋結果', encoding='utf-8-sig')
+#存成excel檔
+df.to_excel(f'{entry}的搜尋結果.xlsx', index=False)
+
+
+
